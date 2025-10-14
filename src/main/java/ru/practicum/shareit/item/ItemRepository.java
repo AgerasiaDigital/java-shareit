@@ -9,11 +9,16 @@ import java.util.stream.Collectors;
 @Repository
 public class ItemRepository {
     private final Map<Long, Item> items = new HashMap<>();
+    private final Map<Long, List<Long>> itemsByOwner = new HashMap<>();
     private Long currentId = 1L;
 
     public Item save(Item item) {
         item.setId(currentId++);
         items.put(item.getId(), item);
+
+        itemsByOwner.computeIfAbsent(item.getOwner(), k -> new ArrayList<>())
+                .add(item.getId());
+
         return item;
     }
 
@@ -27,16 +32,14 @@ public class ItemRepository {
     }
 
     public List<Item> findAllByOwner(Long ownerId) {
-        return items.values().stream()
-                .filter(item -> item.getOwner().equals(ownerId))
+        return itemsByOwner.getOrDefault(ownerId, Collections.emptyList())
+                .stream()
+                .map(items::get)
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 
     public List<Item> search(String text) {
-        if (text == null || text.isBlank()) {
-            return Collections.emptyList();
-        }
-
         String searchText = text.toLowerCase();
         return items.values().stream()
                 .filter(Item::getAvailable)
@@ -48,6 +51,12 @@ public class ItemRepository {
     }
 
     public void delete(Long id) {
-        items.remove(id);
+        Item item = items.remove(id);
+        if (item != null) {
+            List<Long> ownerItems = itemsByOwner.get(item.getOwner());
+            if (ownerItems != null) {
+                ownerItems.remove(id);
+            }
+        }
     }
 }

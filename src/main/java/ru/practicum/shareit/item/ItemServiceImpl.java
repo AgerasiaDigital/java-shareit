@@ -4,10 +4,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.ForbiddenException;
 import ru.practicum.shareit.exception.NotFoundException;
+import ru.practicum.shareit.item.dto.ItemCreateDto;
 import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemUpdateDto;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.UserRepository;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -18,7 +21,7 @@ public class ItemServiceImpl implements ItemService {
     private final UserRepository userRepository;
 
     @Override
-    public ItemDto createItem(Long userId, ItemDto itemDto) {
+    public ItemDto createItem(Long userId, ItemCreateDto itemDto) {
         userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User with id " + userId + " not found"));
 
@@ -28,7 +31,7 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public ItemDto updateItem(Long userId, Long itemId, ItemDto itemDto) {
+    public ItemDto updateItem(Long userId, Long itemId, ItemUpdateDto itemDto) {
         Item existingItem = itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException("Item with id " + itemId + " not found"));
 
@@ -36,17 +39,7 @@ public class ItemServiceImpl implements ItemService {
             throw new ForbiddenException("User is not the owner of the item");
         }
 
-        if (itemDto.getName() != null && !itemDto.getName().isBlank()) {
-            existingItem.setName(itemDto.getName());
-        }
-
-        if (itemDto.getDescription() != null && !itemDto.getDescription().isBlank()) {
-            existingItem.setDescription(itemDto.getDescription());
-        }
-
-        if (itemDto.getAvailable() != null) {
-            existingItem.setAvailable(itemDto.getAvailable());
-        }
+        ItemMapper.updateItemFromDto(existingItem, itemDto);
 
         Item updatedItem = itemRepository.update(existingItem);
         return ItemMapper.toItemDto(updatedItem);
@@ -68,6 +61,10 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public List<ItemDto> searchItems(String text) {
+        if (text == null || text.isBlank()) {
+            return Collections.emptyList();
+        }
+
         return itemRepository.search(text).stream()
                 .map(ItemMapper::toItemDto)
                 .collect(Collectors.toList());
