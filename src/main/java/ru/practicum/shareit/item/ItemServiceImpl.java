@@ -1,6 +1,6 @@
 package ru.practicum.shareit.item;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,23 +20,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ItemServiceImpl implements ItemService {
     private final ItemRepository itemRepository;
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
     private final CommentRepository commentRepository;
-
-    @Autowired
-    public ItemServiceImpl(ItemRepository itemRepository,
-                           UserRepository userRepository,
-                           BookingRepository bookingRepository,
-                           CommentRepository commentRepository) {
-        this.itemRepository = itemRepository;
-        this.userRepository = userRepository;
-        this.bookingRepository = bookingRepository;
-        this.commentRepository = commentRepository;
-    }
 
     @Override
     @Transactional
@@ -80,35 +70,29 @@ public class ItemServiceImpl implements ItemService {
             List<Booking> bookings = bookingRepository.findByItem_Id(itemId,
                     Sort.by(Sort.Direction.DESC, "start"));
 
-            Optional<Booking> lastBookingOpt = bookings.stream()
+            lastBooking = bookings.stream()
                     .filter(b -> !b.getStatus().equals(BookingStatus.REJECTED))
                     .filter(b -> b.getStart().isBefore(now) || b.getStart().isEqual(now))
-                    .findFirst();
+                    .findFirst()
+                    .map(b -> new ItemWithBookingsDto.BookingShortDto(
+                            b.getId(),
+                            b.getBooker().getId(),
+                            b.getStart(),
+                            b.getEnd()
+                    ))
+                    .orElse(null);
 
-            if (lastBookingOpt.isPresent()) {
-                Booking b = lastBookingOpt.get();
-                lastBooking = new ItemWithBookingsDto.BookingShortDto(
-                        b.getId(),
-                        b.getBooker().getId(),
-                        b.getStart(),
-                        b.getEnd()
-                );
-            }
-
-            Optional<Booking> nextBookingOpt = bookings.stream()
+            nextBooking = bookings.stream()
                     .filter(b -> !b.getStatus().equals(BookingStatus.REJECTED))
                     .filter(b -> b.getStart().isAfter(now))
-                    .reduce((first, second) -> second);
-
-            if (nextBookingOpt.isPresent()) {
-                Booking b = nextBookingOpt.get();
-                nextBooking = new ItemWithBookingsDto.BookingShortDto(
-                        b.getId(),
-                        b.getBooker().getId(),
-                        b.getStart(),
-                        b.getEnd()
-                );
-            }
+                    .reduce((first, second) -> second) // Берем последнее из отсортированного списка
+                    .map(b -> new ItemWithBookingsDto.BookingShortDto(
+                            b.getId(),
+                            b.getBooker().getId(),
+                            b.getStart(),
+                            b.getEnd()
+                    ))
+                    .orElse(null);
         }
 
         return ItemMapper.toItemWithBookingsDto(item, lastBooking, nextBooking, comments);
@@ -144,38 +128,29 @@ public class ItemServiceImpl implements ItemService {
                     List<Booking> itemBookings = bookingsByItem.getOrDefault(item.getId(), Collections.emptyList());
                     List<Comment> itemComments = commentsByItem.getOrDefault(item.getId(), Collections.emptyList());
 
-                    ItemWithBookingsDto.BookingShortDto lastBooking = null;
-                    ItemWithBookingsDto.BookingShortDto nextBooking = null;
-
-                    Optional<Booking> lastBookingOpt = itemBookings.stream()
+                    ItemWithBookingsDto.BookingShortDto lastBooking = itemBookings.stream()
                             .filter(b -> !b.getStatus().equals(BookingStatus.REJECTED))
                             .filter(b -> b.getStart().isBefore(now) || b.getStart().isEqual(now))
-                            .findFirst();
+                            .findFirst()
+                            .map(b -> new ItemWithBookingsDto.BookingShortDto(
+                                    b.getId(),
+                                    b.getBooker().getId(),
+                                    b.getStart(),
+                                    b.getEnd()
+                            ))
+                            .orElse(null);
 
-                    if (lastBookingOpt.isPresent()) {
-                        Booking b = lastBookingOpt.get();
-                        lastBooking = new ItemWithBookingsDto.BookingShortDto(
-                                b.getId(),
-                                b.getBooker().getId(),
-                                b.getStart(),
-                                b.getEnd()
-                        );
-                    }
-
-                    Optional<Booking> nextBookingOpt = itemBookings.stream()
+                    ItemWithBookingsDto.BookingShortDto nextBooking = itemBookings.stream()
                             .filter(b -> !b.getStatus().equals(BookingStatus.REJECTED))
                             .filter(b -> b.getStart().isAfter(now))
-                            .reduce((first, second) -> second);
-
-                    if (nextBookingOpt.isPresent()) {
-                        Booking b = nextBookingOpt.get();
-                        nextBooking = new ItemWithBookingsDto.BookingShortDto(
-                                b.getId(),
-                                b.getBooker().getId(),
-                                b.getStart(),
-                                b.getEnd()
-                        );
-                    }
+                            .reduce((first, second) -> second)
+                            .map(b -> new ItemWithBookingsDto.BookingShortDto(
+                                    b.getId(),
+                                    b.getBooker().getId(),
+                                    b.getStart(),
+                                    b.getEnd()
+                            ))
+                            .orElse(null);
 
                     return ItemMapper.toItemWithBookingsDto(item, lastBooking, nextBooking, itemComments);
                 })

@@ -4,20 +4,19 @@ import ru.practicum.shareit.item.dto.*;
 import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class ItemMapper {
 
     public static ItemDto toItemDto(Item item) {
-        ItemDto dto = new ItemDto();
-        dto.setId(item.getId());
-        dto.setName(item.getName());
-        dto.setDescription(item.getDescription());
-        dto.setAvailable(item.getAvailable());
-        dto.setRequestId(item.getRequest());
-        return dto;
+        return new ItemDto(
+                item.getId(),
+                item.getName(),
+                item.getDescription(),
+                item.getAvailable(),
+                item.getRequest()
+        );
     }
 
     public static ItemWithBookingsDto toItemWithBookingsDto(Item item,
@@ -32,26 +31,21 @@ public class ItemMapper {
         dto.setRequestId(item.getRequest());
         dto.setLastBooking(lastBooking);
         dto.setNextBooking(nextBooking);
-
-        if (comments != null) {
-            dto.setComments(comments.stream()
-                    .map(ItemMapper::toCommentDto)
-                    .collect(Collectors.toList()));
-        } else {
-            dto.setComments(new ArrayList<>());
-        }
-
+        dto.setComments(comments.stream()
+                .map(ItemMapper::toCommentDto)
+                .collect(Collectors.toList()));
         return dto;
     }
 
     public static Item toItem(ItemCreateDto itemDto, Long ownerId) {
-        Item item = new Item();
-        item.setName(itemDto.getName());
-        item.setDescription(itemDto.getDescription());
-        item.setAvailable(itemDto.getAvailable());
-        item.setOwner(ownerId);
-        item.setRequest(itemDto.getRequestId());
-        return item;
+        return new Item(
+                null,
+                itemDto.getName(),
+                itemDto.getDescription(),
+                itemDto.getAvailable(),
+                ownerId,
+                itemDto.getRequestId()
+        );
     }
 
     public static void updateItemFromDto(Item item, ItemUpdateDto updateDto) {
@@ -67,11 +61,11 @@ public class ItemMapper {
     }
 
     public static CommentDto toCommentDto(Comment comment) {
-        CommentDto dto = new CommentDto();
-        dto.setId(comment.getId());
-        dto.setText(comment.getText());
-        dto.setAuthorName(comment.getAuthor().getName());
-        dto.setCreated(comment.getCreated());
-        return dto;
+        return new CommentDto(
+                comment.getId(),
+                comment.getText(),
+                comment.getAuthor().getName(),
+                comment.getCreated()
+        );
     }
 }

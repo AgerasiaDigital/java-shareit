@@ -10,7 +10,6 @@ import java.util.List;
 
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, Long> {
-
     List<Booking> findByBooker_Id(Long bookerId, Sort sort);
 
     @Query("select b from Booking b " +

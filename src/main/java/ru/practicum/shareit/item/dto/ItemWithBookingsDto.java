@@ -5,7 +5,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Data
@@ -19,7 +18,7 @@ public class ItemWithBookingsDto {
     private Long requestId;
     private BookingShortDto lastBooking;
     private BookingShortDto nextBooking;
-    private List<CommentDto> comments = new ArrayList<>();
+    private List<CommentDto> comments;
 
     @Data
     @AllArgsConstructor
