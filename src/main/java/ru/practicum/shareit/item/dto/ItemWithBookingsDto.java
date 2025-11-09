@@ -5,11 +5,12 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@AllArgsConstructor
 public class ItemWithBookingsDto {
     private Long id;
     private String name;
@@ -18,11 +19,11 @@ public class ItemWithBookingsDto {
     private Long requestId;
     private BookingShortDto lastBooking;
     private BookingShortDto nextBooking;
-    private List<CommentDto> comments;
+    private List<CommentDto> comments = new ArrayList<>();
 
     @Data
-    @AllArgsConstructor
     @NoArgsConstructor
+    @AllArgsConstructor
     public static class BookingShortDto {
         private Long id;
         private Long bookerId;

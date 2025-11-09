@@ -48,29 +48,34 @@ public class BookingServiceImpl implements BookingService {
             throw new ForbiddenException("Owner cannot book their own item");
         }
 
-        Booking booking = new Booking();
-        booking.setStart(bookingDto.getStart());
-        booking.setEnd(bookingDto.getEnd());
-        booking.setItem(item);
-        booking.setBooker(user);
-        booking.setStatus(BookingStatus.WAITING);
+        List<Booking> overlappingBookings = bookingRepository.findOverlappingBookings(
+                item.getId(),
+                bookingDto.getStart(),
+                bookingDto.getEnd()
+        );
 
+        if (!overlappingBookings.isEmpty()) {
+            throw new IllegalArgumentException("Item is already booked for this period");
+        }
+
+        Booking booking = BookingMapper.toBooking(bookingDto, item, user);
         Booking savedBooking = bookingRepository.save(booking);
+
         return BookingMapper.toBookingDto(savedBooking);
     }
 
     @Override
     @Transactional
-    public BookingDto approveBooking(Long userId, Long bookingId, Boolean approved) {
+    public BookingDto updateBookingStatus(Long userId, Long bookingId, Boolean approved) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new NotFoundException("Booking with id " + bookingId + " not found"));
 
         if (!booking.getItem().getOwner().equals(userId)) {
-            throw new ForbiddenException("Only item owner can approve booking");
+            throw new ForbiddenException("Only item owner can change booking status");
         }
 
         if (!booking.getStatus().equals(BookingStatus.WAITING)) {
-            throw new IllegalArgumentException("Booking is already processed");
+            throw new IllegalArgumentException("Booking status is already processed");
         }
 
         booking.setStatus(approved ? BookingStatus.APPROVED : BookingStatus.REJECTED);
@@ -101,12 +106,12 @@ public class BookingServiceImpl implements BookingService {
         LocalDateTime now = LocalDateTime.now();
 
         List<Booking> bookings = switch (state) {
-            case ALL -> bookingRepository.findByBooker_Id(userId, sort);
+            case ALL -> bookingRepository.findByBookerId(userId, sort);
             case CURRENT -> bookingRepository.findCurrentBookingsByBooker(userId, now, sort);
-            case PAST -> bookingRepository.findByBooker_IdAndEndIsBefore(userId, now, sort);
-            case FUTURE -> bookingRepository.findByBooker_IdAndStartIsAfter(userId, now, sort);
-            case WAITING -> bookingRepository.findByBooker_IdAndStatus(userId, BookingStatus.WAITING, sort);
-            case REJECTED -> bookingRepository.findByBooker_IdAndStatus(userId, BookingStatus.REJECTED, sort);
+            case PAST -> bookingRepository.findByBookerIdAndEndBefore(userId, now, sort);
+            case FUTURE -> bookingRepository.findByBookerIdAndStartAfter(userId, now, sort);
+            case WAITING -> bookingRepository.findByBookerIdAndStatus(userId, BookingStatus.WAITING, sort);
+            case REJECTED -> bookingRepository.findByBookerIdAndStatus(userId, BookingStatus.REJECTED, sort);
         };
 
         return bookings.stream()
@@ -125,8 +130,8 @@ public class BookingServiceImpl implements BookingService {
         List<Booking> bookings = switch (state) {
             case ALL -> bookingRepository.findByItemOwner(userId, sort);
             case CURRENT -> bookingRepository.findCurrentBookingsByOwner(userId, now, sort);
-            case PAST -> bookingRepository.findPastBookingsByOwner(userId, now, sort);
-            case FUTURE -> bookingRepository.findFutureBookingsByOwner(userId, now, sort);
+            case PAST -> bookingRepository.findByItemOwnerAndEndBefore(userId, now, sort);
+            case FUTURE -> bookingRepository.findByItemOwnerAndStartAfter(userId, now, sort);
             case WAITING -> bookingRepository.findByItemOwnerAndStatus(userId, BookingStatus.WAITING, sort);
             case REJECTED -> bookingRepository.findByItemOwnerAndStatus(userId, BookingStatus.REJECTED, sort);
         };

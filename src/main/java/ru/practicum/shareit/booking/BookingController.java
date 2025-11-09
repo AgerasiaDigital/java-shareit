@@ -24,10 +24,10 @@ public class BookingController {
     }
 
     @PatchMapping("/{bookingId}")
-    public BookingDto approveBooking(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                     @PathVariable Long bookingId,
-                                     @RequestParam Boolean approved) {
-        return bookingService.approveBooking(userId, bookingId, approved);
+    public BookingDto updateBookingStatus(@RequestHeader("X-Sharer-User-Id") Long userId,
+                                          @PathVariable Long bookingId,
+                                          @RequestParam Boolean approved) {
+        return bookingService.updateBookingStatus(userId, bookingId, approved);
     }
 
     @GetMapping("/{bookingId}")

@@ -66,33 +66,12 @@ public class ItemServiceImpl implements ItemService {
         ItemWithBookingsDto.BookingShortDto nextBooking = null;
 
         if (item.getOwner().equals(userId)) {
-            LocalDateTime now = LocalDateTime.now();
-            List<Booking> bookings = bookingRepository.findByItem_Id(itemId,
+            List<Booking> bookings = bookingRepository.findByItemId(itemId,
                     Sort.by(Sort.Direction.DESC, "start"));
 
-            lastBooking = bookings.stream()
-                    .filter(b -> !b.getStatus().equals(BookingStatus.REJECTED))
-                    .filter(b -> b.getStart().isBefore(now) || b.getStart().isEqual(now))
-                    .findFirst()
-                    .map(b -> new ItemWithBookingsDto.BookingShortDto(
-                            b.getId(),
-                            b.getBooker().getId(),
-                            b.getStart(),
-                            b.getEnd()
-                    ))
-                    .orElse(null);
-
-            nextBooking = bookings.stream()
-                    .filter(b -> !b.getStatus().equals(BookingStatus.REJECTED))
-                    .filter(b -> b.getStart().isAfter(now))
-                    .reduce((first, second) -> second) // Берем последнее из отсортированного списка
-                    .map(b -> new ItemWithBookingsDto.BookingShortDto(
-                            b.getId(),
-                            b.getBooker().getId(),
-                            b.getStart(),
-                            b.getEnd()
-                    ))
-                    .orElse(null);
+            BookingInfo bookingInfo = getBookingInfo(bookings);
+            lastBooking = bookingInfo.lastBooking;
+            nextBooking = bookingInfo.nextBooking;
         }
 
         return ItemMapper.toItemWithBookingsDto(item, lastBooking, nextBooking, comments);
@@ -111,13 +90,14 @@ public class ItemServiceImpl implements ItemService {
                 .collect(Collectors.toList());
 
         LocalDateTime now = LocalDateTime.now();
-        Map<Long, List<Booking>> bookingsByItem = new HashMap<>();
 
-        for (Long itemId : itemIds) {
-            List<Booking> bookings = bookingRepository.findByItem_Id(itemId,
-                    Sort.by(Sort.Direction.DESC, "start"));
-            bookingsByItem.put(itemId, bookings);
-        }
+        List<Booking> allBookings = items.stream()
+                .flatMap(item -> bookingRepository.findByItemId(item.getId(),
+                        Sort.by(Sort.Direction.DESC, "start")).stream())
+                .collect(Collectors.toList());
+
+        Map<Long, List<Booking>> bookingsByItem = allBookings.stream()
+                .collect(Collectors.groupingBy(b -> b.getItem().getId()));
 
         List<Comment> allComments = commentRepository.findByItem_IdIn(itemIds);
         Map<Long, List<Comment>> commentsByItem = allComments.stream()
@@ -128,31 +108,12 @@ public class ItemServiceImpl implements ItemService {
                     List<Booking> itemBookings = bookingsByItem.getOrDefault(item.getId(), Collections.emptyList());
                     List<Comment> itemComments = commentsByItem.getOrDefault(item.getId(), Collections.emptyList());
 
-                    ItemWithBookingsDto.BookingShortDto lastBooking = itemBookings.stream()
-                            .filter(b -> !b.getStatus().equals(BookingStatus.REJECTED))
-                            .filter(b -> b.getStart().isBefore(now) || b.getStart().isEqual(now))
-                            .findFirst()
-                            .map(b -> new ItemWithBookingsDto.BookingShortDto(
-                                    b.getId(),
-                                    b.getBooker().getId(),
-                                    b.getStart(),
-                                    b.getEnd()
-                            ))
-                            .orElse(null);
+                    BookingInfo bookingInfo = getBookingInfo(itemBookings);
 
-                    ItemWithBookingsDto.BookingShortDto nextBooking = itemBookings.stream()
-                            .filter(b -> !b.getStatus().equals(BookingStatus.REJECTED))
-                            .filter(b -> b.getStart().isAfter(now))
-                            .reduce((first, second) -> second)
-                            .map(b -> new ItemWithBookingsDto.BookingShortDto(
-                                    b.getId(),
-                                    b.getBooker().getId(),
-                                    b.getStart(),
-                                    b.getEnd()
-                            ))
-                            .orElse(null);
-
-                    return ItemMapper.toItemWithBookingsDto(item, lastBooking, nextBooking, itemComments);
+                    return ItemMapper.toItemWithBookingsDto(item,
+                            bookingInfo.lastBooking,
+                            bookingInfo.nextBooking,
+                            itemComments);
                 })
                 .collect(Collectors.toList());
     }
@@ -185,13 +146,51 @@ public class ItemServiceImpl implements ItemService {
             throw new IllegalArgumentException("User has not completed booking for this item");
         }
 
-        Comment comment = new Comment();
-        comment.setText(commentDto.getText());
-        comment.setItem(item);
-        comment.setAuthor(user);
-        comment.setCreated(LocalDateTime.now());
-
+        Comment comment = ItemMapper.toComment(commentDto, item, user);
         Comment savedComment = commentRepository.save(comment);
+
         return ItemMapper.toCommentDto(savedComment);
+    }
+
+    // Приватный метод для извлечения логики бронирований
+    private BookingInfo getBookingInfo(List<Booking> bookings) {
+        LocalDateTime now = LocalDateTime.now();
+
+        ItemWithBookingsDto.BookingShortDto lastBooking = bookings.stream()
+                .filter(b -> !b.getStatus().equals(BookingStatus.REJECTED))
+                .filter(b -> b.getStart().isBefore(now) || b.getStart().isEqual(now))
+                .findFirst()
+                .map(b -> new ItemWithBookingsDto.BookingShortDto(
+                        b.getId(),
+                        b.getBooker().getId(),
+                        b.getStart(),
+                        b.getEnd()
+                ))
+                .orElse(null);
+
+        ItemWithBookingsDto.BookingShortDto nextBooking = bookings.stream()
+                .filter(b -> !b.getStatus().equals(BookingStatus.REJECTED))
+                .filter(b -> b.getStart().isAfter(now))
+                .reduce((first, second) -> second)
+                .map(b -> new ItemWithBookingsDto.BookingShortDto(
+                        b.getId(),
+                        b.getBooker().getId(),
+                        b.getStart(),
+                        b.getEnd()
+                ))
+                .orElse(null);
+
+        return new BookingInfo(lastBooking, nextBooking);
+    }
+
+    private static class BookingInfo {
+        final ItemWithBookingsDto.BookingShortDto lastBooking;
+        final ItemWithBookingsDto.BookingShortDto nextBooking;
+
+        BookingInfo(ItemWithBookingsDto.BookingShortDto lastBooking,
+                    ItemWithBookingsDto.BookingShortDto nextBooking) {
+            this.lastBooking = lastBooking;
+            this.nextBooking = nextBooking;
+        }
     }
 }
