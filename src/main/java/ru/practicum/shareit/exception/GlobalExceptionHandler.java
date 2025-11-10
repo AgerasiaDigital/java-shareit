@@ -23,7 +23,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(ForbiddenException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
     public ErrorResponse handleForbiddenException(ForbiddenException e) {
         return new ErrorResponse(e.getMessage());
     }
@@ -38,6 +38,12 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleMissingHeaderException(MissingRequestHeaderException e) {
         return new ErrorResponse("Required header is missing: " + e.getHeaderName());
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorResponse handleIllegalArgumentException(IllegalArgumentException e) {
+        return new ErrorResponse(e.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
