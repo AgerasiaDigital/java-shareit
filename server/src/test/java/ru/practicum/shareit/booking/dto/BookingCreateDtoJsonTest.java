@@ -31,13 +31,7 @@ class BookingCreateDtoJsonTest {
 
     @Test
     void testBookingCreateDtoDeserialization() throws Exception {
-        String content = """
-                {
-                     "itemId": 1,
-                     "start": "2025-01-01T10:00:00",
-                     "end": "2025-01-02T10:00:00"
-                }
-                """;
+        String content = "{\"itemId\":1,\"start\":\"2025-01-01T10:00:00\",\"end\":\"2025-01-02T10:00:00\"}";
 
         BookingCreateDto result = json.parse(content).getObject();
 
