@@ -127,24 +127,52 @@ class BookingServiceImplTest {
     @Test
     void updateBookingStatus_shouldApproveBooking_whenOwnerApproves() {
         when(bookingRepository.findById(anyLong())).thenReturn(Optional.of(booking));
-        when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
+
+        Booking approvedBooking = new Booking(
+                booking.getId(),
+                booking.getStart(),
+                booking.getEnd(),
+                booking.getItem(),
+                booking.getBooker(),
+                BookingStatus.APPROVED
+        );
+        when(bookingRepository.save(any(Booking.class))).thenReturn(approvedBooking);
 
         BookingDto result = bookingService.updateBookingStatus(1L, 1L, true);
 
         assertNotNull(result);
+        assertEquals(BookingStatus.APPROVED, result.getStatus());
         verify(bookingRepository).save(any(Booking.class));
     }
 
     @Test
     void updateBookingStatus_shouldRejectBooking_whenOwnerRejects() {
-        when(bookingRepository.findById(anyLong())).thenReturn(Optional.of(booking));
-        booking.setStatus(BookingStatus.REJECTED);
-        when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
+        Booking waitingBooking = new Booking(
+                1L,
+                LocalDateTime.now().plusDays(1),
+                LocalDateTime.now().plusDays(2),
+                item,
+                booker,
+                BookingStatus.WAITING
+        );
+
+        when(bookingRepository.findById(anyLong())).thenReturn(Optional.of(waitingBooking));
+
+        Booking rejectedBooking = new Booking(
+                1L,
+                waitingBooking.getStart(),
+                waitingBooking.getEnd(),
+                item,
+                booker,
+                BookingStatus.REJECTED
+        );
+        when(bookingRepository.save(any(Booking.class))).thenReturn(rejectedBooking);
 
         BookingDto result = bookingService.updateBookingStatus(1L, 1L, false);
 
         assertNotNull(result);
         assertEquals(BookingStatus.REJECTED, result.getStatus());
+        verify(bookingRepository).save(any(Booking.class));
     }
 
     @Test
