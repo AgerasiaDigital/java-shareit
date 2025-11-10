@@ -6,8 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import ru.practicum.shareit.item.model.Item;
+import ru.practicum.shareit.request.ItemRequest;
 import ru.practicum.shareit.user.User;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -86,15 +88,21 @@ class ItemRepositoryTest {
 
     @Test
     void findByRequest_shouldReturnItemsForRequest() {
-        Item item1 = new Item(null, "Item1", "Desc1", true, owner.getId(), 1L);
-        Item item2 = new Item(null, "Item2", "Desc2", true, owner.getId(), 1L);
-        Item item3 = new Item(null, "Item3", "Desc3", true, owner.getId(), 2L);
+        ItemRequest request1 = new ItemRequest(null, "Need tools", owner.getId(), LocalDateTime.now());
+        ItemRequest request2 = new ItemRequest(null, "Need furniture", owner.getId(), LocalDateTime.now());
+        em.persist(request1);
+        em.persist(request2);
+        em.flush();
+
+        Item item1 = new Item(null, "Item1", "Desc1", true, owner.getId(), request1.getId());
+        Item item2 = new Item(null, "Item2", "Desc2", true, owner.getId(), request1.getId());
+        Item item3 = new Item(null, "Item3", "Desc3", true, owner.getId(), request2.getId());
         em.persist(item1);
         em.persist(item2);
         em.persist(item3);
         em.flush();
 
-        List<Item> results = itemRepository.findByRequest(1L);
+        List<Item> results = itemRepository.findByRequest(request1.getId());
 
         assertEquals(2, results.size());
     }
