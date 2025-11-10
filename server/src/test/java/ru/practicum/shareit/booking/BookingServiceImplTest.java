@@ -147,6 +147,7 @@ class BookingServiceImplTest {
 
     @Test
     void updateBookingStatus_shouldRejectBooking_whenOwnerRejects() {
+        // Создаем новое бронирование со статусом WAITING
         Booking waitingBooking = new Booking(
                 1L,
                 LocalDateTime.now().plusDays(1),

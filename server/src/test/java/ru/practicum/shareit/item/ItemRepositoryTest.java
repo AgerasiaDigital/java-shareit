@@ -88,12 +88,14 @@ class ItemRepositoryTest {
 
     @Test
     void findByRequest_shouldReturnItemsForRequest() {
+        // Сначала создаем запросы
         ItemRequest request1 = new ItemRequest(null, "Need tools", owner.getId(), LocalDateTime.now());
         ItemRequest request2 = new ItemRequest(null, "Need furniture", owner.getId(), LocalDateTime.now());
         em.persist(request1);
         em.persist(request2);
         em.flush();
 
+        // Теперь создаем Items с существующими request ID
         Item item1 = new Item(null, "Item1", "Desc1", true, owner.getId(), request1.getId());
         Item item2 = new Item(null, "Item2", "Desc2", true, owner.getId(), request1.getId());
         Item item3 = new Item(null, "Item3", "Desc3", true, owner.getId(), request2.getId());
