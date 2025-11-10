@@ -24,7 +24,6 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByBookerIdAndStatus(Long bookerId, BookingStatus status, Sort sort);
 
-    // Бронирования для вещей владельца
     List<Booking> findByItemOwner(Long ownerId, Sort sort);
 
     @Query("select b from Booking b " +
@@ -51,9 +50,8 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     @Query("select b from Booking b " +
             "where b.item.id = ?1 " +
-            "and b.status != 'REJECTED' " +
-            "and b.status != 'CANCELED' " +
-            "and ((b.start < ?3 and b.end > ?2) " +
-            "or (b.start >= ?2 and b.start < ?3))")
+            "and b.status = 'APPROVED' " +
+            "and b.start < ?3 " +
+            "and b.end > ?2")
     List<Booking> findOverlappingBookings(Long itemId, LocalDateTime start, LocalDateTime end);
 }
