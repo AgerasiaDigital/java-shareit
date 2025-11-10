@@ -1,8 +1,48 @@
-name: ShareIt API Tests
+timeout-minutes: 30
 
-on:
-  pull_request:
+steps:
+  - name: Start services
+    run: docker-compose up -d
 
-jobs:
-  build:
-    uses: yandex-praktikum/java-shareit/.github/workflows/api-tests.yml@ci
+  - name: Wait for Postgres to become healthy (up to ~3 minutes)
+    run: |
+      CONTAINER_ID=$(docker-compose ps -q postgres)
+      echo "Postgres container id: $CONTAINER_ID"
+      if [ -z "$CONTAINER_ID" ]; then
+        echo "postgres container not found"
+        docker-compose ps
+        exit 1
+      fi
+
+      for i in $(seq 1 36); do
+        STATUS=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}no-health{{end}}' $CONTAINER_ID)
+        echo "Attempt $i - docker health status: $STATUS"
+        if [ "$STATUS" = "healthy" ]; then
+          echo "Postgres is healthy"
+          exit 0
+        fi
+        # fallback на pg_isready если нет health
+        if docker exec -T $CONTAINER_ID pg_isready -U ${POSTGRES_USER:-postgres} >/dev/null 2>&1; then
+          echo "pg_isready ok"
+          exit 0
+        fi
+        sleep 5
+      done
+
+      echo "Postgres did not become healthy in time"
+      docker-compose logs --no-color --timestamps --tail=500 postgres || true
+      exit 1
+
+  - name: Run tests
+    run: mvn -B test
+
+  - name: Dump docker logs on failure
+    if: failure()
+    run: docker-compose logs --no-color --timestamps --tail=500 > docker-logs.txt || true
+
+  - name: Upload docker logs
+    if: failure()
+    uses: actions/upload-artifact@v4
+    with:
+      name: docker-logs
+      path: docker-logs.txt
