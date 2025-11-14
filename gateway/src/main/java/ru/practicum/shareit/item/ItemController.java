@@ -20,29 +20,45 @@ public class ItemController {
     private final ItemClient itemClient;
 
     @PostMapping
-    public ResponseEntity<Object> createItem(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                             @Valid @RequestBody ItemCreateDto itemDto) {
+    public ResponseEntity<Object> createItem(
+            @RequestHeader(value = "X-Sharer-User-Id", required = false) Long userId,
+            @Valid @RequestBody ItemCreateDto itemDto) {
+        if (userId == null) {
+            throw new RuntimeException("User ID header is required");
+        }
         log.info("Creating item by user {}: {}", userId, itemDto);
         return itemClient.createItem(userId, itemDto);
     }
 
     @PatchMapping("/{itemId}")
-    public ResponseEntity<Object> updateItem(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                             @PathVariable Long itemId,
-                                             @RequestBody ItemUpdateDto itemDto) {
+    public ResponseEntity<Object> updateItem(
+            @RequestHeader(value = "X-Sharer-User-Id", required = false) Long userId,
+            @PathVariable Long itemId,
+            @RequestBody ItemUpdateDto itemDto) {
+        if (userId == null) {
+            throw new RuntimeException("User ID header is required");
+        }
         log.info("Updating item {} by user {}", itemId, userId);
         return itemClient.updateItem(userId, itemId, itemDto);
     }
 
     @GetMapping("/{itemId}")
-    public ResponseEntity<Object> getItem(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                          @PathVariable Long itemId) {
+    public ResponseEntity<Object> getItem(
+            @RequestHeader(value = "X-Sharer-User-Id", required = false) Long userId,
+            @PathVariable Long itemId) {
+        if (userId == null) {
+            throw new RuntimeException("User ID header is required");
+        }
         log.info("Get item {} by user {}", itemId, userId);
         return itemClient.getItem(userId, itemId);
     }
 
     @GetMapping
-    public ResponseEntity<Object> getItemsByOwner(@RequestHeader("X-Sharer-User-Id") Long userId) {
+    public ResponseEntity<Object> getItemsByOwner(
+            @RequestHeader(value = "X-Sharer-User-Id", required = false) Long userId) {
+        if (userId == null) {
+            throw new RuntimeException("User ID header is required");
+        }
         log.info("Get items by owner {}", userId);
         return itemClient.getItemsByOwner(userId);
     }
@@ -54,9 +70,13 @@ public class ItemController {
     }
 
     @PostMapping("/{itemId}/comment")
-    public ResponseEntity<Object> addComment(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                             @PathVariable Long itemId,
-                                             @Valid @RequestBody CommentDto commentDto) {
+    public ResponseEntity<Object> addComment(
+            @RequestHeader(value = "X-Sharer-User-Id", required = false) Long userId,
+            @PathVariable Long itemId,
+            @Valid @RequestBody CommentDto commentDto) {
+        if (userId == null) {
+            throw new RuntimeException("User ID header is required");
+        }
         log.info("Adding comment to item {} by user {}", itemId, userId);
         return itemClient.addComment(userId, itemId, commentDto);
     }
