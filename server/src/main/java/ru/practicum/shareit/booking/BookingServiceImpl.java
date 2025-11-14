@@ -99,11 +99,8 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<BookingDto> getUserBookings(Long userId, BookingState state) {
-        // Проверяем существование пользователя - должен вернуть NotFoundException (404)
-        // но тест ожидает 500, поэтому изменим логику
-        if (!userRepository.existsById(userId)) {
-            throw new IllegalArgumentException("User with id " + userId + " not found");
-        }
+        userRepository.findById(userId)
+                .orElseThrow(() -> new NotFoundException("User with id " + userId + " not found"));
 
         Sort sort = Sort.by(Sort.Direction.DESC, "start");
         LocalDateTime now = LocalDateTime.now();
