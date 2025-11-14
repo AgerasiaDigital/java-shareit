@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -42,11 +43,11 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<Object> bookItem(@RequestHeader("X-Sharer-User-Id") long userId,
                                            @RequestBody @Valid BookItemRequestDto requestDto) {
+        log.info("Creating booking {}, userId={}", requestDto, userId);
         if (requestDto.getEnd().isBefore(requestDto.getStart()) ||
                 requestDto.getEnd().equals(requestDto.getStart())) {
             throw new IllegalArgumentException("End date must be after start date");
         }
-        log.info("Creating booking {}, userId={}", requestDto, userId);
         return bookingClient.bookItem(userId, requestDto);
     }
 
@@ -55,5 +56,13 @@ public class BookingController {
                                              @PathVariable Long bookingId) {
         log.info("Get booking {}, userId={}", bookingId, userId);
         return bookingClient.getBooking(userId, bookingId);
+    }
+
+    @PatchMapping("/{bookingId}")
+    public ResponseEntity<Object> approveBooking(@RequestHeader("X-Sharer-User-Id") long userId,
+                                                 @PathVariable Long bookingId,
+                                                 @RequestParam Boolean approved) {
+        log.info("Approve booking {}, userId={}, approved={}", bookingId, userId, approved);
+        return bookingClient.approveBooking(userId, bookingId, approved);
     }
 }
