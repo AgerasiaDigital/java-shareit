@@ -1,6 +1,5 @@
 package ru.practicum.shareit.booking;
 
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +18,7 @@ public class BookingController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public BookingDto createBooking(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                    @Valid @RequestBody BookingCreateDto bookingDto) {
+                                    @RequestBody BookingCreateDto bookingDto) {
         return bookingService.createBooking(userId, bookingDto);
     }
 
@@ -38,13 +37,15 @@ public class BookingController {
 
     @GetMapping
     public List<BookingDto> getUserBookings(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                            @RequestParam(defaultValue = "ALL") BookingState state) {
-        return bookingService.getUserBookings(userId, state);
+                                            @RequestParam(defaultValue = "ALL") String state) {
+        BookingState bookingState = BookingState.valueOf(state.toUpperCase());
+        return bookingService.getUserBookings(userId, bookingState);
     }
 
     @GetMapping("/owner")
     public List<BookingDto> getOwnerBookings(@RequestHeader("X-Sharer-User-Id") Long userId,
-                                             @RequestParam(defaultValue = "ALL") BookingState state) {
-        return bookingService.getOwnerBookings(userId, state);
+                                             @RequestParam(defaultValue = "ALL") String state) {
+        BookingState bookingState = BookingState.valueOf(state.toUpperCase());
+        return bookingService.getOwnerBookings(userId, bookingState);
     }
 }
