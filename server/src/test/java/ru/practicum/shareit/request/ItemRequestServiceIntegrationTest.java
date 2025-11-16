@@ -3,31 +3,36 @@ package ru.practicum.shareit.request;
 import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.shareit.item.ItemServiceImpl;
 import ru.practicum.shareit.request.dto.ItemRequestCreateDto;
 import ru.practicum.shareit.request.dto.ItemRequestDto;
 import ru.practicum.shareit.user.User;
-import ru.practicum.shareit.user.UserRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
-@SpringBootTest
+@DataJpaTest
 @ActiveProfiles("test")
-@Transactional
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
+@Import({ItemRequestServiceImpl.class, ItemServiceImpl.class})
 class ItemRequestServiceIntegrationTest {
     private final ItemRequestService itemRequestService;
-    private final UserRepository userRepository;
+    private final TestEntityManager entityManager;
 
     @Test
     void createRequest_shouldCreateRequest() {
-        User user = new User(null, "Test User", "test@email.com");
-        user = userRepository.save(user);
+        User user = new User();
+        user.setName("Test User");
+        user.setEmail("test@email.com");
+        entityManager.persist(user);
+        entityManager.flush();
 
         ItemRequestCreateDto createDto = new ItemRequestCreateDto("Need a drill");
 
@@ -41,14 +46,23 @@ class ItemRequestServiceIntegrationTest {
 
     @Test
     void getUserRequests_shouldReturnUserRequests() {
-        User user = new User(null, "Test User", "test@email.com");
-        user = userRepository.save(user);
+        User user = new User();
+        user.setName("Test User");
+        user.setEmail("test@email.com");
+        entityManager.persist(user);
 
-        ItemRequestCreateDto createDto1 = new ItemRequestCreateDto("Need a drill");
-        ItemRequestCreateDto createDto2 = new ItemRequestCreateDto("Need a saw");
+        ItemRequest request1 = new ItemRequest();
+        request1.setDescription("Need a drill");
+        request1.setRequestor(user);
+        request1.setCreated(LocalDateTime.now().minusDays(1));
+        entityManager.persist(request1);
 
-        itemRequestService.createRequest(user.getId(), createDto1);
-        itemRequestService.createRequest(user.getId(), createDto2);
+        ItemRequest request2 = new ItemRequest();
+        request2.setDescription("Need a saw");
+        request2.setRequestor(user);
+        request2.setCreated(LocalDateTime.now());
+        entityManager.persist(request2);
+        entityManager.flush();
 
         List<ItemRequestDto> results = itemRequestService.getUserRequests(user.getId());
 
@@ -59,14 +73,22 @@ class ItemRequestServiceIntegrationTest {
 
     @Test
     void getAllRequests_shouldReturnOtherUsersRequests() {
-        User user1 = new User(null, "User 1", "user1@email.com");
-        user1 = userRepository.save(user1);
+        User user1 = new User();
+        user1.setName("User 1");
+        user1.setEmail("user1@email.com");
+        entityManager.persist(user1);
 
-        User user2 = new User(null, "User 2", "user2@email.com");
-        user2 = userRepository.save(user2);
+        User user2 = new User();
+        user2.setName("User 2");
+        user2.setEmail("user2@email.com");
+        entityManager.persist(user2);
 
-        ItemRequestCreateDto createDto = new ItemRequestCreateDto("Need a drill");
-        itemRequestService.createRequest(user1.getId(), createDto);
+        ItemRequest request = new ItemRequest();
+        request.setDescription("Need a drill");
+        request.setRequestor(user1);
+        request.setCreated(LocalDateTime.now());
+        entityManager.persist(request);
+        entityManager.flush();
 
         List<ItemRequestDto> results = itemRequestService.getAllRequests(user2.getId(), 0, 10);
 
@@ -76,15 +98,21 @@ class ItemRequestServiceIntegrationTest {
 
     @Test
     void getRequest_shouldReturnRequestWithItems() {
-        User user = new User(null, "Test User", "test@email.com");
-        user = userRepository.save(user);
+        User user = new User();
+        user.setName("Test User");
+        user.setEmail("test@email.com");
+        entityManager.persist(user);
 
-        ItemRequestCreateDto createDto = new ItemRequestCreateDto("Need a drill");
-        ItemRequestDto created = itemRequestService.createRequest(user.getId(), createDto);
+        ItemRequest request = new ItemRequest();
+        request.setDescription("Need a drill");
+        request.setRequestor(user);
+        request.setCreated(LocalDateTime.now());
+        entityManager.persist(request);
+        entityManager.flush();
 
-        ItemRequestDto result = itemRequestService.getRequest(user.getId(), created.getId());
+        ItemRequestDto result = itemRequestService.getRequest(user.getId(), request.getId());
 
-        assertThat(result.getId(), equalTo(created.getId()));
+        assertThat(result.getId(), equalTo(request.getId()));
         assertThat(result.getDescription(), equalTo("Need a drill"));
         assertThat(result.getItems(), notNullValue());
     }
