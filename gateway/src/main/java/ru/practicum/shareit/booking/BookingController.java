@@ -44,10 +44,6 @@ public class BookingController {
     public ResponseEntity<Object> bookItem(@RequestHeader("X-Sharer-User-Id") Long userId,
                                            @RequestBody @Valid BookItemRequestDto requestDto) {
         log.info("Creating booking {}, userId={}", requestDto, userId);
-        if (requestDto.getEnd().isBefore(requestDto.getStart()) ||
-                requestDto.getEnd().equals(requestDto.getStart())) {
-            throw new IllegalArgumentException("End date must be after start date");
-        }
         return bookingClient.bookItem(userId, requestDto);
     }
 
